@@ -8,7 +8,7 @@ class StorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Story
-        fields = ['id', 'title', 'is_complete', 'created_at', 'updated_at', 'author']
+        fields = ['id', 'title', 'is_complete', 'created_at', 'updated_at', 'author', 'blurb']
         read_only_fields = ['author']
 
 

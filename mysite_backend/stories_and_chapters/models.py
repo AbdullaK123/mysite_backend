@@ -6,6 +6,7 @@ class Story(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     author = models.ForeignKey('users_and_auth.User', on_delete=models.CASCADE, related_name='stories')
     title = models.CharField(max_length=255)
+    blurb = models.TextField()
     is_complete = models.BooleanField(default=False)
     is_published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

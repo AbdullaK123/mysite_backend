@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action 
 from rest_framework.response import Response
 from .models import Story, Chapter
-from .permissions import IsAuthorOrReadOnly
+from django.core.exceptions import PermissionDenied
 from .serializers import (
     StorySerializer,
     StoryDetailSerializer,
@@ -15,25 +15,30 @@ class StoryViewSet(viewsets.ModelViewSet):
 
     queryset = Story.objects.all().order_by('-created_at')
     serializer_class = StorySerializer
-    permission_classes = [IsAuthorOrReadOnly]
 
     def perform_create(self, serializer):
+
+        if not self.request.user.is_authenticated:
+
+            raise PermissionDenied("Only authors can create stories")
+        
         serializer.save(author=self.request.user)
 
-    def get_queryset(self):
+    def perform_update(self, serializer):
 
-        queryset = Story.objects.all().order_by('-created_at')
+        object = self.get_object()
 
-        author_id = self.request.query_params.get('author')
-        if author_id:
-            queryset = queryset.filter(author_id = author_id)
+        if object.author != self.request.user:
+            raise PermissionDenied("You are not the owner of this story")
+        
+        serializer.save()
 
-        user = self.request.user
-        if not user.is_authenticated or not user.is_staff:
-            queryset = queryset.filter(is_published = True)
+    def perform_destroy(self, instance):
 
-        return queryset
-
+        if instance.author != self.request.user:
+            raise PermissionDenied("You are not the owner of this story")
+        
+        instance.delete()
 
     @action(detail=True, methods=['get'])
     def full(self, request, pk=None):
@@ -48,6 +53,18 @@ class StoryViewSet(viewsets.ModelViewSet):
     def add_chapter(self, request, pk=None):
 
         story = self.get_object()
+
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "You are not authenticated"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if story.author != request.user:
+            return Response(
+                {"detail": "You do not have permission to add chapters to this story."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         serializer = ChapterSerializer(data=request.data)
 
